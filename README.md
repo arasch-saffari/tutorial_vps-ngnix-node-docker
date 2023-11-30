@@ -332,8 +332,16 @@ _______________________
 
 
 
+
+
+
 Ich habe den automatisierten Deployment-Prozess mit GitHub Actions konfiguriert und erfolgreich in Betrieb genommen. 
 Dies ist ein Verfahren, das die automatische Übertragung und Implementierung von Software-Änderungen auf einen Server ermöglicht, sobald neue Code-Änderungen in das Repository gepusht werden.
+
+
+
+_______________________
+
 
 Hier ist eine detailliertere Anleitung und Erklärung:
 
