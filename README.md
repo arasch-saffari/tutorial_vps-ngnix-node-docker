@@ -1,5 +1,4 @@
 # tutorial_vps-ngnix-node-docker
-tutorial for creating a vps and installing, ngnix, node, docker, pm2, certbot
 
 
 Bitte ersetze "deinedomain.de", "DEINE.IP.ADRESSE", "DEINE.IPv6.ADRESSE" und "DEIN_BENUTZERNAME" durch deine tatsächlichen Informationen.
@@ -326,4 +325,77 @@ sh
    - Speichere die aktuelle Anwendungskonfiguration, damit PM2 sie beim Neustart laden kann:
 
      pm2 save
-     
+
+
+
+_______________________
+
+
+
+Ich habe den automatisierten Deployment-Prozess mit GitHub Actions konfiguriert und erfolgreich in Betrieb genommen. 
+Dies ist ein Verfahren, das die automatische Übertragung und Implementierung von Software-Änderungen auf einen Server ermöglicht, sobald neue Code-Änderungen in das Repository gepusht werden.
+
+Hier ist eine detailliertere Anleitung und Erklärung:
+
+1. *Vorbereitung der Secrets:*
+   Zuerst speichern wir unsere Server-IP, den Benutzernamen und den SSH-Schlüssel als Secrets in GitHub. Dazu navigierst du in deinem Repository zu "Settings", dann zum Abschnitt "Security" und wählen "Secrets and variables" unter "Actions". Hier erstellen Sie drei Repository-Secrets:
+   - SERVER_IP: Tragen Sie hier Ihre Server-IP-Adresse oder Domain ein.
+   - SERVER_USERNAME: Dies ist der Username, mit dem Sie sich auf dem Server authentifizieren.
+   - SSH_PRIVATE_KEY: Fügen Sie hier den privaten SSH-Schlüssel ein, der auf Ihrem Server verwendet wird.
+
+Achtet darauf, das beim Kopieren euren SSH Keys kein Leerzeichen am ende mit Kopiert wird. Dieser Fehler hat mich gestern zum verzweifeln gebracht.
+
+2. *Einrichten des Workflow:*
+   Anschließend gehst du zum Tab "Actions" und wählen "New Workflow". Dadurch wird eine neue Datei namens main.yml im Verzeichnis .github/workflows Ihres Repositories erstellt.
+
+Die main.yml Datei ist das Herzstück Ihres automatisierten Deployments und sieht wie folgt aus:
+
+yaml
+name: Deploy Next.js App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20.8.0'
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to Server
+        run: |
+          ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_IP }} <<'EOF'
+          cd /home/arasch/apps/nextui #Hier sollte der Pfad zu eurem Ordner auf dem server sein
+          export PATH=$PATH:/home/arasch/.nvm/versions/node/v20.8.0/bin 
+          #Dieser Befehl war bei mir nötig, weil ich Node via NVM installiert habe. Vielleicht ist der Befehl bei euch auch überflüssig, wenn ihr Node per Apt installiert habt.
+          echo $PATH
+          npm install
+          npm run build
+          pm2 reload nextui-app #Hier muss der name eurer pm2 Instanz stehen, den ihr auch unter pm2 List stehen habt.
+          exit
+          EOF
+
+*Erklärung des Workflows:*
+
+Die Kommentare bitte entfernen, bevor Ihr die Datei ausführt.
+
+- Der Workflow wird ausgelöst, wenn Änderungen (push events) zum main Branch gemacht werden.
+- Der Job build wird auf einer Ubuntu-Maschine ausgeführt und durchläuft verschiedene Schritte:
+   1. *Checkout code:* Der aktuelle Code des Repositories wird ausgecheckt.
+   2. *Setup Node.js environment:* Die Node.js-Umgebung wird mit der spezifizierten Version eingerichtet.
+   3. *Install SSH key:* Der private SSH-Schlüssel wird aus den Secrets geholt und für die SSH-Verbindung verwendet.
+   4. *Deploy to Server:* Es wird eine SSH-Verbindung zum Server hergestellt und eine Reihe von Befehlen ausgeführt, um die Anwendung zu navigieren, Abhängigkeiten zu installieren, das Projekt zu bauen und die Anwendung mit pm2 neu zu laden.
